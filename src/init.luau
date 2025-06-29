@@ -93,7 +93,7 @@ function StateManager.ChangeState<T>(StateName: string, Value: T): ()
 	local watchers = StateWatchers[StateName]
 	
 	if watchers then
-		for i = #watchers, 1, -1 do
+		for i = #watchers, 1, -1 do -- // Backwards incrementing so it doesn't shift elements
 			local watcher = watchers[i]
 			task.spawn(function()
 				local function errorHandler(err)
@@ -193,7 +193,7 @@ function StateManager.SubscribeOnce<T>(StateName: string, Callback: (newValue: T
 	table.insert(StateWatchers[StateName], {Callback = Callback, Once = true})
 end
 
--- WaitForChange(): An asynchronous function that functions the same as SubscribeOnce() except yields all code until it is triggered. You MUST wrap this in a coroutine (Better to use WaitForChangeAsync()).
+-- WaitForChange(): An asynchronous function that functions the same as SubscribeOnce() except yields all code until it is triggered.
 -- @param StateName: The name of the State
 function StateManager.WaitForChange<T>(StateName: string): (T, T)
 	local co = coroutine.running()
@@ -206,15 +206,6 @@ function StateManager.WaitForChange<T>(StateName: string): (T, T)
 	end)
 
 	return coroutine.yield()
-end
-
-
--- WaitForChangeAsync(): A coroutine wrapper for WaitForChange(), allowing you to use it without the need to wrap a coroutine.
--- @param StateName: The name of the State
-function StateManager.WaitForChangeAsync<T>(StateName: string): (T, T)
-	return coroutine.wrap(function()
-		return StateManager.WaitForChange(StateName)
-	end)()
 end
 
 -- Unsubscribe(): Unsubscribes from a state and a specific Callback. When setting Callback to nil, all Callbacks (and duplicates) from that state will be removed.
