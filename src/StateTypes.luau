@@ -17,8 +17,7 @@ export type StateManager = {
 	Unsubscribe: <T>(StateName: string, callback: ((newValue: T, oldValue: T) -> ())?) -> (),
 
 	-- // Async operations
-	WaitForChange: <T>(StateName: string) -> (T, T),
-	WaitForChangeAsync: <T>(StateName: string) -> (T, T),
+	WaitForChange: <T>(StateName: string) -> (T, T)
 }
 
 export type StateValue<T> = {
