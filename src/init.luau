@@ -89,7 +89,7 @@ function StateManager.GetState<T>(StateName: string): T?
 	end
 	local state = StateHolders[StateName]
 	if state then
-		return state.Value :: T
+		return state.Value
 	else
 		warn("There is no Value found for "..StateName)
 		return nil
