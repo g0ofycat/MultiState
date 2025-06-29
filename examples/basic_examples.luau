@@ -1,27 +1,72 @@
 local StateManager = require(game.ReplicatedStorage.MultiState)
 
-function OnStateChanged(New, Old)
-	print("Hello has changed! Old: "..tostring(Old)..". New: "..tostring(New)..".")
+print("=== Basic Usage ===")
+
+-- // EXAMPLE 1: Basics
+function OnPlayerNameChanged(newName: string, oldName: string)
+    print(`Player name changed from "{oldName}" to "{newName}"`)
 end
 
-StateManager.NewState("Hello", false)
+StateManager.NewState("PlayerName", "DefaultPlayer")
+StateManager.NewState("Score", 0)
+StateManager.NewState("IsReady", false)
 
-StateManager.NewState("Numbers", 102)
+StateManager.Subscribe("PlayerName", OnPlayerNameChanged)
 
-StateManager.Subscribe("Hello", OnStateChanged)
+print("Current player name:", StateManager.GetState("PlayerName"))
+print("Current score:", StateManager.GetState("Score"))
 
-print(tostring(StateManager.GetState("Hello")))
+StateManager.ChangeState("PlayerName", "Alice")
+StateManager.ChangeState("PlayerName", "Bob")
+StateManager.ChangeState("Score", 150)
 
-StateManager.ChangeState("Hello", true)
+print("\n=== Advanced Features ===")
 
-StateManager.ChangeState("Hello", "Pan")
+-- // EXAMPLE 2: State Locking
+StateManager.NewState("GameVersion", "1.0.0")
+StateManager.LockState("GameVersion")
+StateManager.ChangeState("GameVersion", "2.0.0") -- // Will warn and fail
 
-StateManager.Unsubscribe("Hello", OnStateChanged)
+-- // EXAMPLE 3: One-time Subscription
+StateManager.SubscribeOnce("Score", function(newScore: number, oldScore: number)
+    print(`Score milestone reached: {oldScore} -> {newScore}`)
+end)
 
-StateManager.ChangeState("Hello", 13.214)
+StateManager.ChangeState("Score", 200) -- // Triggers once
+StateManager.ChangeState("Score", 250) -- // Won't trigger again
 
-StateManager.ChangeState("Numbers", 10)
+-- // EXAMPLE 4: Async Waiting
+task.spawn(function() -- // Wrap since it yields thread
+	local newValue, oldValue = StateManager.WaitForChange("IsReady")
+    print(`Player: Changed from {tostring(oldValue)} to {tostring(newValue)}`)
+end)
 
-print(StateManager.GetState("Hello"))
+task.wait(1)
 
-print(StateManager.GetState("Numbers"))
+StateManager.ChangeState("IsReady", true)
+
+-- // EXAMPLE 5: Complex Data Types
+StateManager.NewState("PlayerStats", {
+    Health = 100,
+    Mana = 50,
+    Level = 1
+})
+
+StateManager.Subscribe("PlayerStats", function(newStats, oldStats)
+    print("New level:", newStats.Level)
+end)
+
+StateManager.ChangeState("PlayerStats", {
+    Health = 120,
+    Mana = 75,
+    Level = 2
+})
+
+-- // Cleanup
+StateManager.Unsubscribe("PlayerName", OnPlayerNameChanged)
+StateManager.DeleteState("PlayerName")
+
+print("\n=== Final State ===")
+print("Score:", StateManager.GetState("Score"))
+print("Is Ready:", StateManager.GetState("IsReady"))
+print("Game Version:", StateManager.GetState("GameVersion"))
