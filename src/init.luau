@@ -193,7 +193,7 @@ function StateManager.SubscribeOnce<T>(StateName: string, Callback: (newValue: T
 	table.insert(StateWatchers[StateName], {Callback = Callback, Once = true})
 end
 
--- WaitForChange(): An asynchronous function that functions the same as SubscribeOnce() except yields all code until it is triggered.
+-- WaitForChange(): An asynchronous function that functions the same as SubscribeOnce() except yields all code until it is triggered. (Wrap this in a task.spawn() function)
 -- @param StateName: The name of the State
 function StateManager.WaitForChange<T>(StateName: string): (T, T)
 	local co = coroutine.running()
