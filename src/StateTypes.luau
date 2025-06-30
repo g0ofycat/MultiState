@@ -5,6 +5,7 @@ export type StateManager = {
 	NewState: <T>(StateName: string, Value: T) -> (),
 	GetState: <T>(StateName: string) -> T?,
 	ChangeState: <T>(StateName: string, Value: T) -> (),
+	ChangeStateQueue: <T>(StateName: string, Value: T) -> (),
 	DeleteState: (StateName: string) -> (),
 
 	-- // State locking
@@ -37,5 +38,14 @@ export type StateWatcher = {
 export type StateWatchers = {
 	[string]: { StateWatcher }
 }
+
+export type QueuedState = {
+	OldValue: any,
+	NewValue: any
+}
+
+export type QueuedStates = { [string]: QueuedState }
+
+export type ChangeQueue = { string }
 
 return nil
