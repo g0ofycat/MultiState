@@ -5,7 +5,6 @@
 --[[ TODO:
 
 	- Add bulk changing, creating, subscribing, etc
-	- Batch changes
 	- Debouncing / Queueing
 	- Filter and get certain states based on their value / Searching states in general
 	- Saved States using DataStores
@@ -16,9 +15,48 @@ local StateManager = {}
 
 local Types = require(script.StateTypes)
 
+local RunService = game:GetService("RunService")
+
 local StateHolders = {} :: Types.StateHolders -- // Table that holds all of the states
 
 local StateWatchers = {} :: Types.StateWatchers -- // Holds the Subscribers
+
+local ChangeQueue = {} :: Types.ChangeQueue -- // Will be used for queueing changes, stores all StateNames that need changing
+
+local QueuedStates = {} :: Types.QueuedStates -- // Temporary storage that holds the old and new values of a state
+
+---------------------------------
+-- // PRIVATE FUNCTIONS
+---------------------------------
+
+local function ProcessQueue(): ()
+	for _, StateName in pairs(ChangeQueue) do
+		local state = StateHolders[StateName]
+		local queued = QueuedStates[StateName]
+
+		if state and queued then
+			state.Value = queued.NewValue
+
+			local watchers = StateWatchers[StateName]
+			if watchers then
+				for i = #watchers, 1, -1 do
+					local watcher = watchers[i]
+					task.spawn(function()
+						xpcall(function()
+							watcher.Callback(queued.NewValue, queued.OldValue)
+						end, warn)
+					end)
+					if watcher.Once then
+						StateManager.Unsubscribe(StateName, watcher.Callback)
+					end
+				end
+			end
+		end
+
+		QueuedStates[StateName] = nil
+	end
+	table.clear(ChangeQueue)
+end
 
 ---------------------------------
 -- // BASICS
@@ -28,11 +66,6 @@ local StateWatchers = {} :: Types.StateWatchers -- // Holds the Subscribers
 -- @param StateName: The name of the State
 -- @param Value: The data that is held by the State
 function StateManager.NewState<T>(StateName: string, Value: T): ()
-	if typeof(StateName) ~= "string" then 
-		warn("StateName must be a String")
-		return
-	end
-
 	if StateHolders[StateName] then
 		warn("State already exists: "..StateName)
 		return
@@ -47,10 +80,6 @@ end
 -- GetState(): Returns the value of a state given the StateName.
 -- @param StateName: The name of the State
 function StateManager.GetState<T>(StateName: string): T?
-	if typeof(StateName) ~= "string" then 
-		warn("StateName must be a String")
-		return nil
-	end
 	local state = StateHolders[StateName]
 	if state then
 		return state.Value
@@ -60,16 +89,10 @@ function StateManager.GetState<T>(StateName: string): T?
 	end
 end
 
-
 -- ChangeState(): Changes a states value given a string and a value.
 -- @param StateName: The name of the State
 -- @param Value: The data that is held by the State
 function StateManager.ChangeState<T>(StateName: string, Value: T): ()
-	if typeof(StateName) ~= "string" then 
-		warn("StateName must be a String")
-		return
-	end
-
 	local state = StateHolders[StateName]
 
 	if not state then 
@@ -77,21 +100,21 @@ function StateManager.ChangeState<T>(StateName: string, Value: T): ()
 		return
 	end
 
-	if state.Value == Value then
-		return
-	end
-
 	if state.Locked then
 		warn("State is locked and cannot be changed: "..StateName)
+		return
+	end
+	
+	if state.Value == Value then
 		return
 	end
 
 	local oldValue = state.Value
 
 	state.Value = Value
-	
+
 	local watchers = StateWatchers[StateName]
-	
+
 	if watchers then
 		for i = #watchers, 1, -1 do -- // Backwards incrementing so it doesn't shift elements
 			local watcher = watchers[i]
@@ -114,11 +137,6 @@ end
 -- LockState(): Locks a state. When locked, you can not change the value OR delete it.
 -- @param StateName: The name of the State
 function StateManager.LockState(StateName: string): ()
-	if typeof(StateName) ~= "string" then 
-		warn("StateName must be a String")
-		return
-	end
-
 	local state = StateHolders[StateName]
 	if state then
 		state.Locked = true
@@ -128,11 +146,6 @@ end
 -- UnlockState(): Unlocks a state. When unlocked, the value can be changed.
 -- @param StateName: The name of the State
 function StateManager.UnlockState(StateName: string): ()
-	if typeof(StateName) ~= "string" then 
-		warn("StateName must be a String")
-		return
-	end
-
 	local state = StateHolders[StateName]
 	if state then
 		state.Locked = false
@@ -142,11 +155,6 @@ end
 -- DeleteState(): Deletes a State.
 -- @param StateName: The name of the State
 function StateManager.DeleteState(StateName: string): ()
-	if typeof(StateName) ~= "string" then 
-		warn("StateName must be a String")
-		return
-	end
-
 	local state = StateHolders[StateName]
 
 	if state and state.Locked then
@@ -193,7 +201,7 @@ function StateManager.SubscribeOnce<T>(StateName: string, Callback: (newValue: T
 	table.insert(StateWatchers[StateName], {Callback = Callback, Once = true})
 end
 
--- WaitForChange(): An asynchronous function that functions the same as SubscribeOnce() except yields all code until it is triggered. (Wrap this in a task.spawn() function)
+-- WaitForChange(): An asynchronous function that functions the same as SubscribeOnce() except yields the thread until it's triggered. (Wrap this in a task.spawn() function)
 -- @param StateName: The name of the State
 function StateManager.WaitForChange<T>(StateName: string): (T, T)
 	local co = coroutine.running()
@@ -230,5 +238,44 @@ function StateManager.Unsubscribe<T>(StateName: string, Callback: (newValue: T, 
 		StateWatchers[StateName] = nil
 	end
 end
+
+-- ChangeStateQueue(): Changes a states value given a string and a value and puts them in a queue. Desired if you're making rapid changes. Values may not reflect instantly when using GetState() as changes are made using .Heartbeat and only applied after the next frame
+-- @param StateName: The name of the State
+-- @param Value: The data that is held by the State
+function StateManager.ChangeStateQueue<T>(StateName: string, Value: T): ()
+	local state = StateHolders[StateName]
+	
+	if not state then 
+		warn("State not found: "..StateName)
+		return
+	end
+
+	if state.Locked then
+		warn("State is locked and cannot be changed: "..StateName)
+		return
+	end
+
+	if state.Value == Value then
+		return
+	end
+
+	if QueuedStates[StateName] then
+		QueuedStates[StateName].NewValue = Value
+	else
+		QueuedStates[StateName] = {
+			OldValue = state.Value,
+			NewValue = Value,
+		}
+		table.insert(ChangeQueue, StateName)
+	end
+end
+
+---------------------------------
+-- // LOOPS
+---------------------------------
+
+RunService.Heartbeat:Connect(function()
+	ProcessQueue()
+end)
 
 return StateManager
