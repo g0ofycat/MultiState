@@ -29,7 +29,8 @@ local QueuedStates = {} :: Types.QueuedStates -- // Temporary storage that holds
 ---------------------------------
 
 local function ProcessQueue(): ()
-	for _, StateName in pairs(ChangeQueue) do
+	for i = 1, #ChangeQueue do
+		local StateName = ChangeQueue[i]
 		local state = StateHolders[StateName]
 		local queued = QueuedStates[StateName]
 
