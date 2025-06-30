@@ -1,4 +1,4 @@
-local StateManager = require(game.ReplicatedStorage.MultiState)
+local StateManager = require(path.to.MultiState)
 
 print("=== Basic Usage ===")
 
