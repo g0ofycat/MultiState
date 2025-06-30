@@ -10,11 +10,19 @@
 	
 ]]
 
-local StateManager = {}
+---------------------------------
+-- // SERVICES / VARIABLES
+---------------------------------
+
+local RunService = game:GetService("RunService")
 
 local Types = require(script.StateTypes)
 
-local RunService = game:GetService("RunService")
+---------------------------------
+-- // STATE STORAGE
+---------------------------------
+
+local StateManager = {} :: Types.StateManager
 
 local StateHolders = {} :: Types.StateHolders -- // Table that holds all of the states
 
