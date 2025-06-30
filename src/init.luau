@@ -4,8 +4,7 @@
 
 --[[ TODO:
 
-	- Add bulk changing, creating, subscribing, etc
-	- Debouncing / Queueing
+	- Add the ability to bulk change, create, subscribe, etc.
 	- Filter and get certain states based on their value / Searching states in general
 	- Saved States using DataStores
 	
