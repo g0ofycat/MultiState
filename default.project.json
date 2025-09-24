@@ -1,0 +1,12 @@
+{
+  "name": "MultiState",
+  "tree": {
+    "$className": "DataModel",
+
+    "ReplicatedStorage": {
+      "MultiState": {
+        "$path": "MultiState"
+      }
+    }
+  }
+}

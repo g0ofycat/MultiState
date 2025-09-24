@@ -1,28 +1,26 @@
 --!strict
---!native
---!optimize 2
 
 --[[ TODO:
 
 	- Add the ability to bulk change, create, subscribe, etc.
 	- Filter and get certain states based on their value / Searching states in general
 	- Saved States using DataStores
-	
+
 ]]
 
----------------------------------
--- // SERVICES / VARIABLES
----------------------------------
+local StateManager = {}
+
+--===============================
+-- // SERVICES & MODULES
+--===============================
 
 local RunService = game:GetService("RunService")
 
-local Types = require(script.StateTypes)
+local Types = require(script.Parent.Types)
 
----------------------------------
--- // STATE STORAGE
----------------------------------
-
-local StateManager = {} :: Types.StateManager
+--===============================
+-- // DATA
+--===============================
 
 local StateHolders = {} :: Types.StateHolders -- // Table that holds all of the states
 
@@ -32,9 +30,9 @@ local ChangeQueue = {} :: Types.ChangeQueue -- // Will be used for queueing chan
 
 local QueuedStates = {} :: Types.QueuedStates -- // Temporary storage that holds the old and new values of a state
 
----------------------------------
--- // PRIVATE FUNCTIONS
----------------------------------
+--===============================
+-- // PRIVATE API
+--===============================
 
 local function ProcessQueue(): ()
 	for i = 1, #ChangeQueue do
@@ -66,9 +64,9 @@ local function ProcessQueue(): ()
 	table.clear(ChangeQueue)
 end
 
----------------------------------
--- // BASICS
----------------------------------
+--===============================
+-- // PUBLIC API
+--===============================
 
 -- NewState(): Creates a new state given a string and a value. (Cannot have 2 states with the same name)
 -- @param StateName: The name of the State
@@ -112,7 +110,7 @@ function StateManager.ChangeState<T>(StateName: string, Value: T): ()
 		warn("State is locked and cannot be changed: "..StateName)
 		return
 	end
-	
+
 	if state.Value == Value then
 		return
 	end
@@ -172,10 +170,6 @@ function StateManager.DeleteState(StateName: string): ()
 
 	StateHolders[StateName] = nil
 end
-
----------------------------------
--- // ADVANCED
----------------------------------
 
 -- Subscribe(): Subscribes to a state. When subscribed, it will trigger if the states value has changed. Can subscribe to the same State.
 -- @param StateName: The name of the State
@@ -252,7 +246,7 @@ end
 -- @param Value: The data that is held by the State
 function StateManager.ChangeStateQueue<T>(StateName: string, Value: T): ()
 	local state = StateHolders[StateName]
-	
+
 	if not state then 
 		warn("State not found: "..StateName)
 		return
@@ -278,9 +272,9 @@ function StateManager.ChangeStateQueue<T>(StateName: string, Value: T): ()
 	end
 end
 
----------------------------------
--- // LOOPS
----------------------------------
+--===============================
+-- // CONNECTIONS
+--===============================
 
 RunService.Heartbeat:Connect(function()
 	ProcessQueue()
