@@ -1,7 +1,7 @@
 # MultiState
 
 A lightweight **state management module** for Roblox that lets you create, track, and react to named states across your game.
-It supports subscriptions, one-time listeners, queued updates, and state locking—making it easy to maintain global or per-system states.
+It supports subscriptions, one-time listeners, queued updates, and state locking, making it easy to maintain global or per-system states.
 
 ## Features
 - **Create & manage named states** with any Lua value.
